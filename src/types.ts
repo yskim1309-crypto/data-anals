@@ -14,6 +14,9 @@ export interface TestMetadata {
 export interface DataPoint {
   timestamp: number;
   value: number;
+  temperature?: number;
+  current?: number;
+  power?: number;
   simulation?: number;
 }
 

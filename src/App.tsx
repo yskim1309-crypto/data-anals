@@ -25,6 +25,8 @@ export default function App() {
   const [rawData, setRawData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [downsampleRate, setDownsampleRate] = useState(2000);
+  const [xAxisParam, setXAxisParam] = useState<keyof DataPoint>('timestamp');
+  const [yAxisParam, setYAxisParam] = useState<keyof DataPoint>('value');
 
   const [aiSummary, setAiSummary] = useState<string | undefined>(undefined);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -40,16 +42,23 @@ export default function App() {
         const mock: DataPoint[] = [];
         for (let i = 0; i < 5000; i++) {
           const t = i * 0.1;
-          // Base signal 28V + low frequency ripple + high frequency noise
           const base = 28;
           const ripple = Math.sin(t * 0.4) * 0.5;
           const noise = (Math.random() - 0.5) * 0.3;
           const val = base + ripple + noise;
           
+          // Simulated temperature starting at 25C and rising with load
+          const temp = 25 + (i * 0.005) + Math.sin(t * 0.1) * 2;
+          const current = 10 + Math.sin(t * 0.2) * 2 + (Math.random() - 0.5) * 0.5;
+          const power = val * current;
+          
           mock.push({
             timestamp: t,
             value: val,
-            simulation: base + ripple // Perfect simulation without noise
+            temperature: temp,
+            current: current,
+            power: power,
+            simulation: base + ripple
           });
         }
         setRawData(mock);
@@ -153,12 +162,18 @@ export default function App() {
           setMode={setMode} 
           downsampleRate={downsampleRate}
           setDownsampleRate={setDownsampleRate}
+          xAxisParam={xAxisParam}
+          setXAxisParam={setXAxisParam}
+          yAxisParam={yAxisParam}
+          setYAxisParam={setYAxisParam}
         />
         
         <MainChart 
           data={processedData} 
           mode={mode} 
-          loading={loading} 
+          loading={loading}
+          xAxisParam={xAxisParam}
+          yAxisParam={yAxisParam}
         />
 
         <ResultsPanel 

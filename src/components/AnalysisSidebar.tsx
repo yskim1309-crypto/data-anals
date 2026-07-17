@@ -4,7 +4,7 @@
  */
 
 import { Activity, BarChart3, ShieldCheck, Cpu, Sliders } from 'lucide-react';
-import { AnalysisMode } from '../types';
+import { DataPoint, AnalysisMode } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -17,9 +17,22 @@ interface Props {
   setMode: (mode: AnalysisMode) => void;
   downsampleRate: number;
   setDownsampleRate: (rate: number) => void;
+  xAxisParam: keyof DataPoint;
+  setXAxisParam: (param: keyof DataPoint) => void;
+  yAxisParam: keyof DataPoint;
+  setYAxisParam: (param: keyof DataPoint) => void;
 }
 
-export function AnalysisSidebar({ mode, setMode, downsampleRate, setDownsampleRate }: Props) {
+export function AnalysisSidebar({ 
+  mode, 
+  setMode, 
+  downsampleRate, 
+  setDownsampleRate,
+  xAxisParam,
+  setXAxisParam,
+  yAxisParam,
+  setYAxisParam
+}: Props) {
   const menuItems = [
     { id: 'WAVEFORM', label: 'Waveform Plot', icon: Activity },
     { id: 'FFT', label: 'FFT Analysis', icon: BarChart3 },
@@ -73,6 +86,40 @@ export function AnalysisSidebar({ mode, setMode, downsampleRate, setDownsampleRa
             <p className="text-[10px] text-slate-500 italic leading-relaxed">
               *Min-Max Decimation preserves transient noise even at lower resolutions.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-xs font-mono text-slate-500 uppercase tracking-widest">Axis Configuration</h2>
+        <div className="space-y-4 bg-slate-800/30 p-4 rounded-xl border border-brand-border">
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 uppercase font-bold">X-Axis Param</label>
+            <select 
+              value={xAxisParam}
+              onChange={(e) => setXAxisParam(e.target.value as keyof DataPoint)}
+              className="w-full bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none focus:border-brand-accent"
+            >
+              <option value="timestamp">Time (ms)</option>
+              <option value="temperature">Temperature (°C)</option>
+              <option value="value">Voltage (V)</option>
+              <option value="current">Current (A)</option>
+              <option value="power">Power (W)</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 uppercase font-bold">Y-Axis Param</label>
+            <select 
+              value={yAxisParam}
+              onChange={(e) => setYAxisParam(e.target.value as keyof DataPoint)}
+              className="w-full bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none focus:border-brand-accent"
+            >
+              <option value="value">Voltage (V)</option>
+              <option value="temperature">Temperature (°C)</option>
+              <option value="current">Current (A)</option>
+              <option value="power">Power (W)</option>
+              <option value="simulation">Simulated (V)</option>
+            </select>
           </div>
         </div>
       </div>

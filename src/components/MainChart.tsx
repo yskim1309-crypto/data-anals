@@ -10,6 +10,8 @@ interface Props {
   data: DataPoint[];
   mode: AnalysisMode;
   loading: boolean;
+  xAxisParam: keyof DataPoint;
+  yAxisParam: keyof DataPoint;
 }
 
 const MIL_STD_LIMIT = [
@@ -18,7 +20,38 @@ const MIL_STD_LIMIT = [
   { frequency: 10000000, limit: 60 },
 ];
 
-export function MainChart({ data, mode, loading }: Props) {
+export function MainChart({ data, mode, loading, xAxisParam, yAxisParam }: Props) {
+  const getTickFormatter = (param: keyof DataPoint) => {
+    if (param === 'timestamp') return (val: any) => `${val.toFixed(2)}ms`;
+    if (param === 'temperature') return (val: any) => `${val.toFixed(1)}°C`;
+    if (param === 'power') return (val: any) => `${val.toFixed(0)}W`;
+    return (val: any) => val.toString();
+  }
+
+  const getLabel = (param: keyof DataPoint) => {
+    const labels: Record<string, string> = {
+      timestamp: 'Time',
+      value: 'Voltage',
+      temperature: 'Temperature',
+      current: 'Current',
+      power: 'Power',
+      simulation: 'Simulated'
+    };
+    return labels[param as string] || param;
+  }
+
+  const getUnit = (param: keyof DataPoint) => {
+    const units: Record<string, string> = {
+      timestamp: 'ms',
+      value: 'V',
+      temperature: '°C',
+      current: 'A',
+      power: 'W',
+      simulation: 'V'
+    };
+    return units[param as string] || '';
+  }
+
   if (loading) {
     return (
       <div className="flex-1 bg-slate-900 flex items-center justify-center">
@@ -54,10 +87,16 @@ export function MainChart({ data, mode, loading }: Props) {
           <div className="flex gap-2">
              <div className="flex items-center gap-2 px-2 py-1 bg-slate-900 rounded border border-slate-700">
                 <div className={`w-2 h-2 rounded-full ${mode === 'MIL_STD' ? 'bg-orange-400' : 'bg-brand-accent'}`}></div>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {mode === 'FFT' || mode === 'MIL_STD' ? 'SPECTRUM' : 'CH1: VOLTAGE'}
+                <span className="text-[10px] text-slate-400 font-mono uppercase">
+                  {mode === 'FFT' || mode === 'MIL_STD' ? 'SPECTRUM' : `${getLabel(yAxisParam)} (${getUnit(yAxisParam)})`}
                 </span>
              </div>
+             {(mode === 'SIMULATION') && (
+               <div className="flex items-center gap-2 px-2 py-1 bg-slate-900 rounded border border-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-pink-500"></div>
+                  <span className="text-[10px] text-slate-400 font-mono uppercase">SIMULATED</span>
+               </div>
+             )}
              {mode === 'MIL_STD' && (
                 <div className="flex items-center gap-2 px-2 py-1 bg-slate-900 rounded border border-slate-700">
                   <div className="w-2 h-2 rounded-full bg-red-500"></div>
@@ -73,25 +112,27 @@ export function MainChart({ data, mode, loading }: Props) {
               <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis 
-                  dataKey="timestamp" 
+                  dataKey={xAxisParam} 
                   stroke="#475569" 
                   fontSize={10} 
-                  tickFormatter={(val) => `${val.toFixed(2)}ms`}
+                  tickFormatter={getTickFormatter(xAxisParam)}
+                  label={{ value: `${getLabel(xAxisParam)} (${getUnit(xAxisParam)})`, position: 'insideBottom', offset: -5, fontSize: 10, fill: '#64748b' }}
                 />
-                <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} />
+                <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} label={{ value: `${getLabel(yAxisParam)} (${getUnit(yAxisParam)})`, angle: -90, position: 'insideLeft', fontSize: 10, fill: '#64748b' }} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0b0f1a', border: '1px solid #1e293b', borderRadius: '8px' }}
                   itemStyle={{ fontSize: '12px' }}
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="value" 
+                  dataKey={yAxisParam} 
                   stroke="#f37321" 
                   strokeWidth={1.5} 
                   dot={false} 
                   activeDot={{ r: 4, stroke: '#f37321', strokeWidth: 2 }}
+                  name={getLabel(yAxisParam)}
                 />
-                {mode === 'SIMULATION' && (
+                {mode === 'SIMULATION' && yAxisParam === 'value' && (
                   <Line 
                     type="monotone" 
                     dataKey="simulation" 
@@ -99,6 +140,7 @@ export function MainChart({ data, mode, loading }: Props) {
                     strokeWidth={1.5} 
                     strokeDasharray="5 5"
                     dot={false} 
+                    name="Simulated (V)"
                   />
                 )}
               </LineChart>
