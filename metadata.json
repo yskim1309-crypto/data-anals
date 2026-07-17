@@ -1,0 +1,6 @@
+{
+  "name": "Power Test AI Analysis Dashboard",
+  "description": "Professional power electronics test data analysis tool with MIL-STD verification, peak-preserve downsampling, and automated PDF reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
