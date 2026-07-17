@@ -30,8 +30,15 @@ const genAI = new GoogleGenAI({
 app.post("/api/analyze", async (req, res) => {
   const { metadata, stats } = req.body;
 
-  if (!process.env.GEMINI_API_KEY) {
-    return res.status(500).json({ error: "Gemini API key is not configured." });
+  console.log("AI Analysis Request received");
+
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "MY_GEMINI_API_KEY") {
+    console.error("Gemini API key is not configured or is placeholder.");
+    return res.status(500).json({ error: "Gemini API key is not configured in Secrets." });
+  }
+
+  if (!metadata || !stats) {
+    return res.status(400).json({ error: "Missing metadata or analysis statistics." });
   }
 
   try {
@@ -39,15 +46,15 @@ app.post("/api/analyze", async (req, res) => {
       As a Power Electronics R&D Engineer, analyze the following power test data and provide a concise professional summary.
       
       Test Conditions:
-      - Voltage: ${metadata.voltage}
-      - Temperature: ${metadata.temperature}
-      - Load: ${metadata.load}
+      - Voltage: ${metadata.voltage || 'N/A'}
+      - Temperature: ${metadata.temperature || 'N/A'}
+      - Load: ${metadata.load || 'N/A'}
       
       Analysis Metrics:
-      - Peak-to-Peak Voltage: ${stats.peakValue.toFixed(2)}V
-      - RMS Voltage: ${stats.rmsValue.toFixed(2)}V
-      - Ripple Factor: ${stats.ripple.toFixed(2)}%
-      - Verdict: ${stats.passFail}
+      - Peak-to-Peak Voltage: ${stats.peakValue?.toFixed(2) || '0.00'}V
+      - RMS Voltage: ${stats.rmsValue?.toFixed(2) || '0.00'}V
+      - Ripple Factor: ${stats.ripple?.toFixed(2) || '0.00'}%
+      - Verdict: ${stats.passFail || 'PENDING'}
       
       Please provide:
       1. A brief interpretation of the results.
@@ -57,15 +64,21 @@ app.post("/api/analyze", async (req, res) => {
       Format the response in clear bullet points and keep it professional.
     `;
 
+    console.log("Generating content with Gemini...");
     const result = await genAI.models.generateContent({
       model: "gemini-3.5-flash",
-      contents: prompt,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
+    if (!result || !result.text) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    console.log("Analysis generated successfully");
     res.json({ summary: result.text });
   } catch (error: any) {
     console.error("AI Analysis Error:", error);
-    res.status(500).json({ error: "Failed to generate AI analysis." });
+    res.status(500).json({ error: `AI Error: ${error.message || "Failed to generate analysis"}` });
   }
 });
 

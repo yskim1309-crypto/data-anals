@@ -13,10 +13,13 @@ export interface TestMetadata {
 
 export interface DataPoint {
   timestamp: number;
-  value: number;
+  value: number; // Output Voltage
+  valueInput?: number;
   temperature?: number;
-  current?: number;
-  power?: number;
+  current?: number; // Output Current
+  currentInput?: number;
+  power?: number; // Output Power
+  powerInput?: number;
   simulation?: number;
 }
 

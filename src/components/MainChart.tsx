@@ -12,6 +12,8 @@ interface Props {
   loading: boolean;
   xAxisParam: keyof DataPoint;
   yAxisParam: keyof DataPoint;
+  xDomain: [number | 'auto', number | 'auto'];
+  yDomain: [number | 'auto', number | 'auto'];
 }
 
 const MIL_STD_LIMIT = [
@@ -20,21 +22,26 @@ const MIL_STD_LIMIT = [
   { frequency: 10000000, limit: 60 },
 ];
 
-export function MainChart({ data, mode, loading, xAxisParam, yAxisParam }: Props) {
+export function MainChart({ data, mode, loading, xAxisParam, yAxisParam, xDomain, yDomain }: Props) {
   const getTickFormatter = (param: keyof DataPoint) => {
     if (param === 'timestamp') return (val: any) => `${val.toFixed(2)}ms`;
     if (param === 'temperature') return (val: any) => `${val.toFixed(1)}°C`;
-    if (param === 'power') return (val: any) => `${val.toFixed(0)}W`;
+    if (param === 'power' || param === 'powerInput') return (val: any) => `${val.toFixed(0)}W`;
+    if (param === 'value' || param === 'valueInput') return (val: any) => `${val.toFixed(1)}V`;
+    if (param === 'current' || param === 'currentInput') return (val: any) => `${val.toFixed(2)}A`;
     return (val: any) => val.toString();
   }
 
   const getLabel = (param: keyof DataPoint) => {
     const labels: Record<string, string> = {
       timestamp: 'Time',
-      value: 'Voltage',
+      value: 'Voltage Out',
+      valueInput: 'Voltage In',
       temperature: 'Temperature',
-      current: 'Current',
-      power: 'Power',
+      current: 'Current Out',
+      currentInput: 'Current In',
+      power: 'Power Out',
+      powerInput: 'Power In',
       simulation: 'Simulated'
     };
     return labels[param as string] || param;
@@ -44,9 +51,12 @@ export function MainChart({ data, mode, loading, xAxisParam, yAxisParam }: Props
     const units: Record<string, string> = {
       timestamp: 'ms',
       value: 'V',
+      valueInput: 'V',
       temperature: '°C',
       current: 'A',
+      currentInput: 'A',
       power: 'W',
+      powerInput: 'W',
       simulation: 'V'
     };
     return units[param as string] || '';
@@ -74,6 +84,12 @@ export function MainChart({ data, mode, loading, xAxisParam, yAxisParam }: Props
     );
   }
 
+  const sortedData = [...data].sort((a, b) => {
+    const valA = a[xAxisParam] ?? 0;
+    const valB = b[xAxisParam] ?? 0;
+    return (valA as number) - (valB as number);
+  });
+
   return (
     <div className="flex-1 p-6 overflow-hidden flex flex-col gap-6">
       <div className="bg-slate-800/40 border border-brand-border rounded-2xl p-6 flex-1 min-h-0 flex flex-col shadow-2xl">
@@ -91,7 +107,7 @@ export function MainChart({ data, mode, loading, xAxisParam, yAxisParam }: Props
                   {mode === 'FFT' || mode === 'MIL_STD' ? 'SPECTRUM' : `${getLabel(yAxisParam)} (${getUnit(yAxisParam)})`}
                 </span>
              </div>
-             {(mode === 'SIMULATION') && (
+             {(mode === 'SIMULATION' && yAxisParam === 'value') && (
                <div className="flex items-center gap-2 px-2 py-1 bg-slate-900 rounded border border-slate-700">
                   <div className="w-2 h-2 rounded-full bg-pink-500"></div>
                   <span className="text-[10px] text-slate-400 font-mono uppercase">SIMULATED</span>
@@ -109,16 +125,25 @@ export function MainChart({ data, mode, loading, xAxisParam, yAxisParam }: Props
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             {mode === 'WAVEFORM' || mode === 'SIMULATION' ? (
-              <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <LineChart data={sortedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis 
+                  type="number"
                   dataKey={xAxisParam} 
                   stroke="#475569" 
                   fontSize={10} 
                   tickFormatter={getTickFormatter(xAxisParam)}
+                  domain={xDomain}
+                  allowDataOverflow={true}
                   label={{ value: `${getLabel(xAxisParam)} (${getUnit(xAxisParam)})`, position: 'insideBottom', offset: -5, fontSize: 10, fill: '#64748b' }}
                 />
-                <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} label={{ value: `${getLabel(yAxisParam)} (${getUnit(yAxisParam)})`, angle: -90, position: 'insideLeft', fontSize: 10, fill: '#64748b' }} />
+                <YAxis 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  domain={yDomain} 
+                  allowDataOverflow={true}
+                  label={{ value: `${getLabel(yAxisParam)} (${getUnit(yAxisParam)})`, angle: -90, position: 'insideLeft', fontSize: 10, fill: '#64748b' }} 
+                />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0b0f1a', border: '1px solid #1e293b', borderRadius: '8px' }}
                   itemStyle={{ fontSize: '12px' }}

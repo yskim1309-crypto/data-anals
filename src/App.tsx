@@ -27,6 +27,8 @@ export default function App() {
   const [downsampleRate, setDownsampleRate] = useState(2000);
   const [xAxisParam, setXAxisParam] = useState<keyof DataPoint>('timestamp');
   const [yAxisParam, setYAxisParam] = useState<keyof DataPoint>('value');
+  const [xDomain, setXDomain] = useState<[number | 'auto', number | 'auto']>(['auto', 'auto']);
+  const [yDomain, setYDomain] = useState<[number | 'auto', number | 'auto']>(['auto', 'auto']);
 
   const [aiSummary, setAiSummary] = useState<string | undefined>(undefined);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -47,17 +49,30 @@ export default function App() {
           const noise = (Math.random() - 0.5) * 0.3;
           const val = base + ripple + noise;
           
+          // Input side: Higher voltage, slightly noisier
+          const baseInput = 48;
+          const noiseInput = (Math.random() - 0.5) * 0.8;
+          const valInput = baseInput + noiseInput;
+
           // Simulated temperature starting at 25C and rising with load
           const temp = 25 + (i * 0.005) + Math.sin(t * 0.1) * 2;
-          const current = 10 + Math.sin(t * 0.2) * 2 + (Math.random() - 0.5) * 0.5;
-          const power = val * current;
+          
+          const currentOut = 10 + Math.sin(t * 0.2) * 2 + (Math.random() - 0.5) * 0.5;
+          const powerOut = val * currentOut;
+
+          // Input current assumes ~90% efficiency: Pin = Pout / 0.9
+          const currentIn = (powerOut / 0.9) / valInput;
+          const powerIn = valInput * currentIn;
           
           mock.push({
             timestamp: t,
             value: val,
+            valueInput: valInput,
             temperature: temp,
-            current: current,
-            power: power,
+            current: currentOut,
+            currentInput: currentIn,
+            power: powerOut,
+            powerInput: powerIn,
             simulation: base + ripple
           });
         }
@@ -127,6 +142,7 @@ export default function App() {
     if (!analysisResults) return;
     
     setIsAiLoading(true);
+    setAiSummary(undefined);
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -138,11 +154,16 @@ export default function App() {
       });
       
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze data');
+      }
+      
       if (data.summary) {
         setAiSummary(data.summary);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI Analysis Error:', error);
+      setAiSummary(`Analysis Error: ${error.message || 'Service unavailable'}`);
     } finally {
       setIsAiLoading(false);
     }
@@ -166,6 +187,10 @@ export default function App() {
           setXAxisParam={setXAxisParam}
           yAxisParam={yAxisParam}
           setYAxisParam={setYAxisParam}
+          xDomain={xDomain}
+          setXDomain={setXDomain}
+          yDomain={yDomain}
+          setYDomain={setYDomain}
         />
         
         <MainChart 
@@ -174,6 +199,8 @@ export default function App() {
           loading={loading}
           xAxisParam={xAxisParam}
           yAxisParam={yAxisParam}
+          xDomain={xDomain}
+          yDomain={yDomain}
         />
 
         <ResultsPanel 
