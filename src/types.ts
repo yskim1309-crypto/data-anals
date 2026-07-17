@@ -23,6 +23,12 @@ export interface AnalysisResult {
   peakValue: number;
   rmsValue: number;
   passFail: 'PASS' | 'FAIL' | 'PENDING';
+  aiSummary?: string;
+  milStdResults?: {
+    worstMargin: number;
+    failedFrequency?: number;
+    isPass: boolean;
+  };
 }
 
 export type AnalysisMode = 'WAVEFORM' | 'FFT' | 'MIL_STD' | 'SIMULATION';

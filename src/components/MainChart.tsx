@@ -13,11 +13,9 @@ interface Props {
 }
 
 const MIL_STD_LIMIT = [
-  { frequency: 0, limit: 100 },
-  { frequency: 10, limit: 100 },
-  { frequency: 100, limit: 80 },
-  { frequency: 1000, limit: 60 },
-  { frequency: 10000, limit: 60 },
+  { frequency: 10000, limit: 94 },
+  { frequency: 500000, limit: 60 },
+  { frequency: 10000000, limit: 60 },
 ];
 
 export function MainChart({ data, mode, loading }: Props) {
@@ -55,14 +53,16 @@ export function MainChart({ data, mode, loading }: Props) {
           </h3>
           <div className="flex gap-2">
              <div className="flex items-center gap-2 px-2 py-1 bg-slate-900 rounded border border-slate-700">
-                <div className="w-2 h-2 rounded-full bg-brand-accent"></div>
-                <span className="text-[10px] text-slate-400 font-mono">CH1: VOLTAGE</span>
+                <div className={`w-2 h-2 rounded-full ${mode === 'MIL_STD' ? 'bg-orange-400' : 'bg-brand-accent'}`}></div>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {mode === 'FFT' || mode === 'MIL_STD' ? 'SPECTRUM' : 'CH1: VOLTAGE'}
+                </span>
              </div>
-             {mode === 'SIMULATION' && (
-               <div className="flex items-center gap-2 px-2 py-1 bg-slate-900 rounded border border-slate-700">
-                  <div className="w-2 h-2 rounded-full bg-pink-500"></div>
-                  <span className="text-[10px] text-slate-400 font-mono">SIM: PSIM_OUT</span>
-               </div>
+             {mode === 'MIL_STD' && (
+                <div className="flex items-center gap-2 px-2 py-1 bg-slate-900 rounded border border-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-[10px] text-slate-400 font-mono">LIMIT (CE102)</span>
+                </div>
              )}
           </div>
         </div>
@@ -80,16 +80,16 @@ export function MainChart({ data, mode, loading }: Props) {
                 />
                 <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#0b0f1a', border: '1px solid #1e293b', borderRadius: '8px' }}
                   itemStyle={{ fontSize: '12px' }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="value" 
-                  stroke="#38bdf8" 
+                  stroke="#f37321" 
                   strokeWidth={1.5} 
                   dot={false} 
-                  activeDot={{ r: 4, stroke: '#38bdf8', strokeWidth: 2 }}
+                  activeDot={{ r: 4, stroke: '#f37321', strokeWidth: 2 }}
                 />
                 {mode === 'SIMULATION' && (
                   <Line 
@@ -106,27 +106,57 @@ export function MainChart({ data, mode, loading }: Props) {
               <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorFFT" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#38bdf8" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#f37321" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#f37321" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                <XAxis dataKey="timestamp" stroke="#475569" fontSize={10} label={{ value: 'Frequency (Hz)', position: 'insideBottom', offset: -5 }} />
+                <XAxis 
+                  dataKey="timestamp" 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  tickFormatter={(val) => `${(val/1000).toFixed(0)}k`}
+                />
                 <YAxis stroke="#475569" fontSize={10} label={{ value: 'dBuV', angle: -90, position: 'insideLeft' }} />
                 <Tooltip />
-                <Area type="stepAfter" dataKey="value" stroke="#38bdf8" fillOpacity={1} fill="url(#colorFFT)" />
+                <Area type="stepAfter" dataKey="value" stroke="#f37321" fillOpacity={1} fill="url(#colorFFT)" />
               </AreaChart>
             ) : (
               // MIL-STD View
               <LineChart margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                 <XAxis type="number" dataKey="timestamp" stroke="#475569" fontSize={10} domain={[10, 10000000]} scale="log" />
-                 <YAxis stroke="#475569" fontSize={10} />
+                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={true} />
+                 <XAxis 
+                    type="number" 
+                    dataKey="timestamp" 
+                    stroke="#475569" 
+                    fontSize={10} 
+                    domain={[10000, 10000000]} 
+                    scale="log" 
+                    tickFormatter={(val) => val >= 1000000 ? `${val/1000000}M` : `${val/1000}k`}
+                 />
+                 <YAxis stroke="#475569" fontSize={10} domain={[0, 100]} />
                  <Tooltip />
                  {/* Limit Line */}
-                 <Line data={MIL_STD_LIMIT} type="stepAfter" dataKey="limit" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+                 <Line 
+                    data={MIL_STD_LIMIT} 
+                    type="linear" 
+                    dataKey="limit" 
+                    stroke="#ef4444" 
+                    strokeWidth={3} 
+                    dot={true} 
+                    strokeDasharray="5 5" 
+                    name="LIMIT"
+                 />
                  {/* Actual Data */}
-                 <Line data={data} type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={1} dot={false} />
+                 <Line 
+                    data={data} 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#f37321" 
+                    strokeWidth={2} 
+                    dot={false} 
+                    name="MEASURED"
+                 />
               </LineChart>
             )}
           </ResponsiveContainer>

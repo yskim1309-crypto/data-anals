@@ -5,9 +5,10 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand-bg: #0f172a;
+  --color-brand-bg: #0b0f1a;
   --color-brand-border: #1e293b;
-  --color-brand-accent: #38bdf8;
+  --color-brand-accent: #f37321;
+  --color-brand-data: #38bdf8;
   --color-brand-success: #10b981;
   --color-brand-danger: #ef4444;
 }

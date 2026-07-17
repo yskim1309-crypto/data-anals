@@ -63,9 +63,9 @@ export function AnalysisSidebar({ mode, setMode, downsampleRate, setDownsampleRa
             </div>
             <input 
               type="range" 
-              min="500" 
-              max="5000" 
-              step="500"
+              min="50" 
+              max="2000" 
+              step="50"
               value={downsampleRate}
               onChange={(e) => setDownsampleRate(Number(e.target.value))}
               className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-accent"

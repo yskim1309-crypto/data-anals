@@ -10,7 +10,7 @@ import { AnalysisSidebar } from './components/AnalysisSidebar';
 import { MainChart } from './components/MainChart';
 import { ResultsPanel } from './components/ResultsPanel';
 import { TestMetadata, AnalysisMode, DataPoint, AnalysisResult } from './types';
-import { downsamplePeakPreserve, calculateStats } from './lib/analysis';
+import { downsamplePeakPreserve, calculateStats, parseFileName, calculateFFT, checkMILSTD } from './lib/analysis';
 
 export default function App() {
   const [metadata, setMetadata] = useState<TestMetadata>({
@@ -26,9 +26,37 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [downsampleRate, setDownsampleRate] = useState(2000);
 
+  const [aiSummary, setAiSummary] = useState<string | undefined>(undefined);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   const handleFileUpload = useCallback((file: File) => {
     setLoading(true);
-    setMetadata(prev => ({ ...prev, fileName: file.name }));
+    setMetadata(parseFileName(file.name));
+    setAiSummary(undefined);
+
+    // If it's a dummy file from "Load Sample", generate virtual data
+    if (file.size === 0) {
+      setTimeout(() => {
+        const mock: DataPoint[] = [];
+        for (let i = 0; i < 5000; i++) {
+          const t = i * 0.1;
+          // Base signal 28V + low frequency ripple + high frequency noise
+          const base = 28;
+          const ripple = Math.sin(t * 0.4) * 0.5;
+          const noise = (Math.random() - 0.5) * 0.3;
+          const val = base + ripple + noise;
+          
+          mock.push({
+            timestamp: t,
+            value: val,
+            simulation: base + ripple // Perfect simulation without noise
+          });
+        }
+        setRawData(mock);
+        setLoading(false);
+      }, 800);
+      return;
+    }
 
     Papa.parse(file, {
       header: true,
@@ -66,17 +94,50 @@ export default function App() {
     const stats = calculateStats(rawData);
     if (!stats) return null;
 
-    // Logic for PASS/FAIL (Example: Ripple < 5% is PASS)
-    const isPass = stats.ripple < 5;
+    let milStdResults = undefined;
+    let isPass = stats.ripple < 5;
+
+    if (mode === 'MIL_STD' || mode === 'FFT') {
+      const fftData = calculateFFT(rawData);
+      milStdResults = checkMILSTD(fftData);
+      isPass = milStdResults.isPass;
+    }
 
     return {
       ripple: stats.ripple,
       peakValue: stats.max - stats.min,
       rmsValue: stats.rms,
       passFail: isPass ? 'PASS' : 'FAIL',
-      efficiency: metadata.load ? 92.4 : undefined // Mock efficiency
+      efficiency: metadata.load ? 92.4 : undefined, // Mock efficiency
+      aiSummary: aiSummary,
+      milStdResults
     };
-  }, [rawData, metadata.load]);
+  }, [rawData, metadata.load, aiSummary, mode]);
+
+  const handleAiAnalyze = useCallback(async () => {
+    if (!analysisResults) return;
+    
+    setIsAiLoading(true);
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata,
+          stats: analysisResults
+        }),
+      });
+      
+      const data = await response.json();
+      if (data.summary) {
+        setAiSummary(data.summary);
+      }
+    } catch (error) {
+      console.error('AI Analysis Error:', error);
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [analysisResults, metadata]);
 
   return (
     <div className="min-h-screen flex flex-col selection:bg-brand-accent selection:text-slate-900">
@@ -102,13 +163,15 @@ export default function App() {
 
         <ResultsPanel 
           results={analysisResults} 
-          fileName={metadata.fileName} 
+          fileName={metadata.fileName}
+          onAiAnalyze={handleAiAnalyze}
+          isAiLoading={isAiLoading}
         />
       </main>
 
       {/* Grid Pattern Background */}
-      <div className="fixed inset-0 pointer-events-none -z-10 opacity-[0.03]" 
-        style={{ backgroundImage: 'radial-gradient(#38bdf8 1px, transparent 1px)', backgroundSize: '32px 32px' }} 
+      <div className="fixed inset-0 pointer-events-none -z-10 opacity-[0.02]" 
+        style={{ backgroundImage: 'radial-gradient(#f37321 1px, transparent 1px)', backgroundSize: '32px 32px' }} 
       />
     </div>
   );

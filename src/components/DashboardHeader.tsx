@@ -69,7 +69,15 @@ export function DashboardHeader({ metadata, onMetadataChange, onFileUpload }: Pr
             />
           </div>
 
-          <label className="flex items-center gap-2 px-4 py-2 bg-brand-accent hover:bg-brand-accent/90 text-slate-900 font-medium rounded-md cursor-pointer transition-all">
+          <button 
+            onClick={() => onFileUpload(new File([""], "Sample_28V_80C_Load100.csv"))}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-md transition-all border border-brand-border"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Load Sample</span>
+          </button>
+
+          <label className="flex items-center gap-2 px-4 py-2 bg-brand-accent hover:bg-brand-accent/90 text-white font-medium rounded-md cursor-pointer transition-all shadow-lg shadow-brand-accent/20">
             <Upload className="w-4 h-4" />
             <span>Import CSV</span>
             <input type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
